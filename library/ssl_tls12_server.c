@@ -38,6 +38,15 @@
 #include "mbedtls/constant_time.h"
 
 #include <string.h>
+#include <assert.h>
+
+#define HASH_BUF_CHECK(hash_buf, hash_buf_size, limit) { \
+    unsigned x = 0, i; \
+    for (i = (limit); i < (hash_buf_size); i++) \
+        x |= (hash_buf)[i]; \
+    assert(x == 0); \
+}
+
 
 #if defined(MBEDTLS_ECP_C)
 #include "mbedtls/ecp.h"
@@ -3062,7 +3071,7 @@ curve_matching_done:
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
         unsigned char hash[PSA_HASH_MAX_SIZE];
 #else
-        unsigned char hash[MBEDTLS_MD_MAX_SIZE];
+        unsigned char hash[MBEDTLS_MD_MAX_SIZE] = {0};
 #endif
         int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
@@ -3102,6 +3111,9 @@ curve_matching_done:
                                                           dig_signed,
                                                           dig_signed_len,
                                                           md_alg );
+            HASH_BUF_CHECK(hash, sizeof(hash), 48);
+            assert(hashlen <= 48);
+
             if( ret != 0 )
                 return( ret );
         }
@@ -4094,7 +4106,7 @@ static int ssl_parse_certificate_verify( mbedtls_ssl_context *ssl )
 {
     int ret = MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE;
     size_t i, sig_len;
-    unsigned char hash[48];
+    unsigned char hash[MBEDTLS_MD_MAX_SIZE] = {0};
     unsigned char *hash_start = hash;
     size_t hashlen;
     mbedtls_pk_type_t pk_alg;
@@ -4234,6 +4246,8 @@ static int ssl_parse_certificate_verify( mbedtls_ssl_context *ssl )
     {
         size_t dummy_hlen;
         ssl->handshake->calc_verify( ssl, hash, &dummy_hlen );
+        HASH_BUF_CHECK(hash, sizeof(hash), 48);
+        assert(dummy_hlen <= 48);
     }
 
     if( ( ret = mbedtls_pk_verify( peer_pk,
