@@ -44,6 +44,14 @@
 #include <string.h>
 
 #include <stdint.h>
+#include <assert.h>
+
+#define HASH_BUF_CHECK(hash_buf, hash_buf_size, limit) { \
+    unsigned x = 0, i; \
+    for (i = (limit); i < (hash_buf_size); i++) \
+        x |= (hash_buf)[i]; \
+    assert(x == 0); \
+}
 
 #if defined(MBEDTLS_HAVE_TIME)
 #include "mbedtls/platform_time.h"
@@ -2464,6 +2472,9 @@ start_processing:
             ret = mbedtls_ssl_get_key_exchange_md_tls1_2( ssl, hash, &hashlen,
                                                           params, params_len,
                                                           md_alg );
+            HASH_BUF_CHECK(hash, sizeof(hash), 48);
+            assert(hashlen <= 48);
+
             if( ret != 0 )
                 return( ret );
         }
@@ -3360,7 +3371,7 @@ static int ssl_write_certificate_verify( mbedtls_ssl_context *ssl )
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info =
         ssl->handshake->ciphersuite_info;
     size_t n = 0, offset = 0;
-    unsigned char hash[48];
+    unsigned char hash[MBEDTLS_MD_MAX_SIZE];
     unsigned char *hash_start = hash;
     mbedtls_md_type_t md_alg = MBEDTLS_MD_NONE;
     size_t hashlen;
@@ -3418,7 +3429,10 @@ static int ssl_write_certificate_verify( mbedtls_ssl_context *ssl )
 sign:
 #endif
 
+    memset(&hash, 0, sizeof(hash));
     ssl->handshake->calc_verify( ssl, hash, &hashlen );
+    HASH_BUF_CHECK(hash, sizeof(hash), 48);
+    assert(hashlen <= 48);
 
     /*
      * digitally-signed struct {
@@ -3464,6 +3478,8 @@ sign:
                          &n,
                          ssl->conf->f_rng, ssl->conf->p_rng, rs_ctx ) ) != 0 )
     {
+        HASH_BUF_CHECK(hash, sizeof(hash), 48);
+        assert(hashlen <= 48);
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_pk_sign", ret );
 #if defined(MBEDTLS_SSL_ECP_RESTARTABLE_ENABLED)
         if( ret == MBEDTLS_ERR_ECP_IN_PROGRESS )
@@ -3471,6 +3487,8 @@ sign:
 #endif
         return( ret );
     }
+    HASH_BUF_CHECK(hash, sizeof(hash), 48);
+    assert(hashlen <= 48);
 
     MBEDTLS_PUT_UINT16_BE( n, ssl->out_msg, offset + 4 );
 
