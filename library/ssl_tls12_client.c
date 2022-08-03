@@ -2472,8 +2472,6 @@ start_processing:
             ret = mbedtls_ssl_get_key_exchange_md_tls1_2( ssl, hash, &hashlen,
                                                           params, params_len,
                                                           md_alg );
-            HASH_BUF_CHECK(hash, sizeof(hash), 48);
-            assert(hashlen <= 48);
 
             if( ret != 0 )
                 return( ret );
