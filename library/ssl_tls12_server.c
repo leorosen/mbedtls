@@ -3111,8 +3111,8 @@ curve_matching_done:
                                                           dig_signed,
                                                           dig_signed_len,
                                                           md_alg );
-            HASH_BUF_CHECK(hash, sizeof(hash), 48);
-            assert(hashlen <= 48);
+            HASH_BUF_CHECK(hash, sizeof(hash), 64);
+            assert(hashlen <= 64);
 
             if( ret != 0 )
                 return( ret );
